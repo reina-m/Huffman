@@ -11,7 +11,7 @@ let input_code cin =
 
 let char_freq in_c = 
   let tab = Array.make 256 0 in
-  let rec aux () = 
+  let rec loop () = 
         let o = input_code in_c in 
           if o < 0 then tab
           else (
@@ -19,5 +19,5 @@ let char_freq in_c =
             aux ()
           )
   in
-  aux ()
+  loop ()
 ;;
