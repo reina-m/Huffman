@@ -4,7 +4,10 @@ type tree =
 ;;
 
 (*ordonnées par ordre croissant*)
-type heap = (int * tree) list
+type t = (int * tree) list
+(** The type of heaps. Elements are ordered using generic comparison.
+*)
+
 let empty = []
 
 let is_singleton h = 
@@ -17,15 +20,15 @@ let is_empty h =
   h = empty
 ;;
 
-let rec add h x = 
+let rec add x h = 
   match h with 
   | [] -> [x]
   | (a, b) :: hh ->
-    if fst x <= a then x :: h
-    else (a, b) :: add hh x
+    if fst x <= a then x :: hh
+    else (a, b) :: add x hh
 ;;
 
-let find_min he = 
+let find_min h = 
   match h with 
   | [] -> failwith "find_min on empty heap"
   | e :: _ -> e
