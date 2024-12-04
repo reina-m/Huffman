@@ -47,8 +47,18 @@ let build_huff_tree h =
       let (f2, t2), heap2 = Heap.remove_min heap1 in 
       (*combiner ces deux minimums*)
       let t3 = Heap.Node (t1, t2) in 
-      let heap3 = Heap.add (f1 + f2, t3) heap2 in 
+      let heap3 = Heap.add ((f1 + f2), t3) heap2 in 
       loop heap3
   in
   loop h
+;;
+
+(*fonction qui affiche l'arbre, ajoutée pour tests, i accumulateur pour l'identation*)
+let rec print_tree t i = 
+  match t with 
+  | Heap.Leaf c -> Printf.printf "%sLeaf '%c'\n" i c
+  | Heap.Node (g, d) -> (*gauche et droit*)
+    Printf.printf "%sNode\n" i;
+    print_tree g (i ^ " ");
+    print_tree d (i ^ " ")
 ;;

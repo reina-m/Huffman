@@ -36,6 +36,6 @@ let find_min h =
 
 let remove_min h = 
   match h with 
-  | [] -> failwith "find_min on empty heap"
+  | [] -> failwith "remove_min on empty heap"
   | e :: hh -> (e, hh)
 ;;
