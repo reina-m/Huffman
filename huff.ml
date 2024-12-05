@@ -6,7 +6,7 @@ let main () =
     freq_tab;
   
   (*tests de la construction de l'arbre*)
-  let freq_heap = Huffman.freq_heap in_c in
+  let freq_heap = Huffman.freq_heap freq_tab in
   let huff_tree = Huffman.build_huff_tree freq_heap in 
   Printf.printf "Arbre de Huffman : \n";
   Huffman.print_tree huff_tree "";

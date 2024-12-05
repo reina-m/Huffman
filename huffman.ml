@@ -25,23 +25,26 @@ let char_freq in_c =
 (*contruire le nombre d'occurences de chaque caractère du texte
 par exemple : H = (3, s) (3, a) (2, t) (2, i) (1, f) (1, n) *)
 
-let freq_heap in_c = 
-  let tab = char_freq in_c in 
+let freq_heap tab = 
   let rec aux acc i = 
-    match i with 
-      | 256 -> acc
-      | _ -> aux ((tab.(i),  Heap.Leaf (Char.chr i) ) :: acc) (i+1)
+    if i = 256 then acc
+    else 
+      let nacc = 
+      if tab.(i) > 0 then (tab.(i), Heap.Leaf (Char.chr i)) :: acc 
+      else acc 
+      in 
+      aux nacc (i+1)
   in
-  (aux [] 0)
+  aux [] 0
 ;;
 
 (*construire l'arbre à partir de heap de fréquence*)
 let build_huff_tree h = 
   let rec loop heap = 
-    match h with 
+    match heap with 
     | [] -> failwith "build_huff_tree on empty heap"
-    | [_, t] -> t (*il reste un arbre au final*)
-    | _ -> 
+    | [(_, t)] -> t (*il reste un arbre au final*)
+    | _ -> (*au moins deux*)
       (*extraire les deux minimums*)
       let (f1, t1), heap1 = Heap.remove_min heap in 
       let (f2, t2), heap2 = Heap.remove_min heap1 in 
@@ -50,7 +53,7 @@ let build_huff_tree h =
       let heap3 = Heap.add ((f1 + f2), t3) heap2 in 
       loop heap3
   in
-  loop h
+  loop (List.sort (fun a b -> compare (fst a) (fst b)) h)
 ;;
 
 (*fonction qui affiche l'arbre, ajoutée pour tests, i accumulateur pour l'identation*)

@@ -24,7 +24,7 @@ let rec add x h =
   match h with 
   | [] -> [x]
   | (a, b) :: hh ->
-    if fst x <= a then x :: hh
+    if fst x < a then x :: h
     else (a, b) :: add x hh
 ;;
 
