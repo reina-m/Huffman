@@ -77,10 +77,25 @@ let help () =
   Printf.printf "huff --help              Affiche le message d'aide\n";
   Printf.printf "huff fichier             Compression du fichier\n";
   Printf.printf "huff fichier.hf          Décompression du fichier\n";
-  Printf.printf "huff --stats fichier     Compression et affichage des statistques\n";
+  Printf.printf "huff --stats fichier     Compression et statistques\n";
 
   Printf.printf "\n";
   Printf.printf "=============================================\n\n"
 ;;
 
 let stats () = failwith "todo"
+
+(*fonction qui donne le code (chemin) des caractères à partir de l'arbre de huffman
+droite : 1, gauche : 0
+renvoie une liste de paire dont la première composante est le caractère
+la seconde est son code *)
+let chemin tree =
+  let rec loop t code acc = 
+    match t with 
+    | Heap.Leaf c -> (c, code) :: acc
+    | Heap.Node (g, d) -> 
+      let nacc = loop g (code ^ "0") acc in 
+      loop d (code ^ "1") nacc
+  in
+  loop tree "" []
+;;
