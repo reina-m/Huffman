@@ -65,3 +65,22 @@ let rec print_tree t i =
     print_tree g (i ^ " ");
     print_tree d (i ^ " ")
 ;;
+
+(*FONCTIONS POUR GESTION DE LA LIGNE DE COMMANDE :*)
+
+(*fonction qui affiche le message d'aide*)
+let help () = 
+  Printf.printf "=============================================\n";
+  Printf.printf "              Programme Huff                 \n";
+  Printf.printf "=============================================\n\n";
+
+  Printf.printf "huff --help              Affiche le message d'aide\n";
+  Printf.printf "huff fichier             Compression du fichier\n";
+  Printf.printf "huff fichier.hf          Décompression du fichier\n";
+  Printf.printf "huff --stats fichier     Compression et affichage des statistques\n";
+
+  Printf.printf "\n";
+  Printf.printf "=============================================\n\n"
+;;
+
+let stats () = failwith "todo"
