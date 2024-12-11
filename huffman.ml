@@ -107,8 +107,44 @@ let rec serialize_tree os t =
   match t with 
   | Heap.Leaf c -> 
     Bs.write_bit os 0; 
+    Bs.write_byte os (Char.code c);
   | Heap.Node (g, d) -> 
     Bs.write_bit os 1;
     serialize_tree os g; 
     serialize_tree os d
+;;
+
+(*pour écrire le ostream dans un fichier compressé
+à partir d'un istream et la liste de codes (qui est comme un dictionnaire)*)
+let write_data in_c codes os =
+  let rec loop () =
+    match input_code in_c with
+    | -1 -> () (* eof *)
+    | bit ->
+      let code = List.assoc (Char.chr bit) codes in
+      Bs.write_n_bits os (String.length code) (int_of_string ("0b" ^ code));
+      loop ()
+  in
+  loop ()
+;;
+
+let compress f =
+  let in_c = open_in f in
+  let freq_tab = char_freq in_c in
+  let freq_heap = freq_heap freq_tab in
+  let huff_tree = build_huff_tree freq_heap in
+  let char_codes = code_of_tree huff_tree in
+
+  let f2 = f^".hf" in 
+  let cout = open_out f2 in
+  let os = Bs.of_out_channel cout in
+  serialize_tree os huff_tree;
+
+  seek_in in_c 0;
+
+  write_data in_c char_codes os;
+
+  Bs.finalize os;
+  close_in in_c;
+  close_out cout
 ;;
