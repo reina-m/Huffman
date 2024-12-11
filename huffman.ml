@@ -1,5 +1,5 @@
 let decompress _ = failwith "todo"
-let compress _ = failwith "todo"
+
 
 let input_code cin = 
   (*fonction qui gère l'exception*)
@@ -89,7 +89,7 @@ let stats () = failwith "todo"
 droite : 1, gauche : 0
 renvoie une liste de paire dont la première composante est le caractère
 la seconde est son code *)
-let chemin tree =
+let code_of_tree tree =
   let rec loop t code acc = 
     match t with 
     | Heap.Leaf c -> (c, code) :: acc
@@ -98,4 +98,17 @@ let chemin tree =
       loop d (code ^ "1") nacc
   in
   loop tree "" []
+;;
+
+(*fonction pour sérialisation de l'arbre
+si on est dans un noeud interne, on écrit 1 puis sur SAG et SAD
+si on est dans une feuille, on écrit 0 *)
+let rec serialize_tree os t = 
+  match t with 
+  | Heap.Leaf c -> 
+    Bs.write_bit os 0; 
+  | Heap.Node (g, d) -> 
+    Bs.write_bit os 1;
+    serialize_tree os g; 
+    serialize_tree os d
 ;;
