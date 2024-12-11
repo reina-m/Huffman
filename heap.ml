@@ -1,33 +1,40 @@
-type 'a t = 'a list (* remplacer par une définition qui vous convient *)
+type tree = 
+  | Leaf of char 
+  | Node of tree * tree 
+;;
 
+(*ordonnées par ordre décroissant*)
+type heap = (int * tree) list
 let empty = []
 
-let is_singleton t = 
-  match t with 
+let is_singleton h = 
+  match h with 
   | [_] -> true 
   | _ -> false 
 ;;
 
-let is_empty t = 
-  t = empty (*à tester*)
+let is_empty h = 
+  h = empty (*à tester*)
 ;;
 
-let rec add t x = 
-  match t with 
+let rec add h x = 
+  match h with 
   | [] -> [x]
-  | e :: tt ->  
-    if x <= e then x :: e :: tt
-    else e :: add tt x
+  | (a, b) :: tt ->
+    if fst x <= a then x :: tt
+    else (a, b) :: add tt x
 ;;
 
-let find_min t = 
-  match t with 
-  | [] -> failwith "find_min on empty heap"
-  | e :: _ -> e (*car c'est un tas?*)
-;;
 
-let remove_min t = 
-  match t with 
-  | [] -> failwith "remove_min on empty heap"
-  | e :: tt -> (e, tt)
+let find_min he = 
+  let rec aux acc h=
+  match acc h with 
+  | (_,[]) -> acc
+  | ([], e :: hh) -> aux e hh  
+  | ((a1, b1) :: _, (a2, b2) :: hh) -> if a2 < a1 then aux [(a2, b2)] hh 
+  else aux [(a2,b2)::acc] hh
+in aux [] he
 ;;
+    
+    
+ 
