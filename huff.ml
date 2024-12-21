@@ -1,6 +1,7 @@
 let main () = 
 
-  Huffman.compress Sys.argv.(1)
-  (* Huffman.decompress "fichier";*)
+  let f = Sys.argv.(1) in 
+  Huffman.compress f;
+  Huffman.decompress (f ^ ".hf")
 
 let () = main ()

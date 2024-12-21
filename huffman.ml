@@ -160,13 +160,16 @@ let rec deserialize_tree b =
 
 (*décode une séquence binaire, prend la séquence et l'arbre de huffman en arguments*)
 let rec decode_data b t = 
-  match b, t with 
-  | [], _ -> [] (*il ne reste plus de bits*)
-  | 0 :: ll, Heap.Node (g, _) -> decode_data ll g
-  | 1 :: ll, Heap.Node (_, d) -> decode_data ll d
-  (*on ajoute le charactère dans la liste*)
-  | _, Heap.Leaf char -> char :: decode_data b t
-  | _ -> failwith "decode_data : bit invalide"
+  let rec loop bits tree acc = 
+    match bits, tree with 
+    | [], _ -> List.rev acc (*il ne reste plus de bits*)
+    | 0 :: ll, Heap.Node (g, _) -> loop ll g acc
+    | 1 :: ll, Heap.Node (_, d) -> loop ll d acc
+    (*on ajoute le charactère dans la liste*)
+    | _, Heap.Leaf char -> loop bits t (char :: acc)
+    | _ -> failwith "decode_data : bit invalide"
+  in 
+  loop b t []
 ;;
 
 let rec read_bits b = 
@@ -183,7 +186,7 @@ let decompress f =
   let huff_tree = deserialize_tree b in 
   (*les bits qui restent (sans l'arbre)*)
   let data = decode_data (read_bits b) huff_tree in 
-  let res = Filename.chop_suffix f ".hf" in 
+  let res = Filename.chop_suffix f ".hf"^"_decompressed" in 
   let cout = open_out res in 
   List.iter (fun char -> output_byte cout (Char.code char)) data;
   close_out cout; 
