@@ -141,10 +141,21 @@ let compress f =
   serialize_tree os huff_tree;
 
   seek_in in_c 0;
-
   write_data in_c char_codes os;
 
   Bs.finalize os;
   close_in in_c;
   close_out cout
+;;
+
+(*prend en argument une séquence binaire*)
+let deserialize_tree b = 
+  match Bs.read_n_bits b 1 with 
+  | 0 -> (*lit une feuille puis son code*)
+    let char = Bs.read_n_bits b 8 in 
+    Heap.Leaf char (*codé sur 8 bits*)
+  | 1 -> 
+    let g = deserialize_tree () in 
+    let d = deserialize_tree () in 
+    Heap.Node (g, d)
 ;;
