@@ -1,6 +1,3 @@
-let decompress _ = failwith "todo"
-
-
 let input_code cin = 
   (*fonction qui gère l'exception*)
   try 
@@ -149,13 +146,46 @@ let compress f =
 ;;
 
 (*prend en argument une séquence binaire*)
-let deserialize_tree b = 
+let rec deserialize_tree b = 
   match Bs.read_n_bits b 1 with 
   | 0 -> (*lit une feuille puis son code*)
     let char = Bs.read_n_bits b 8 in 
-    Heap.Leaf char (*codé sur 8 bits*)
+    Heap.Leaf (Char.chr char) (*codé sur 8 bits*)
   | 1 -> 
-    let g = deserialize_tree () in 
-    let d = deserialize_tree () in 
+    let g = deserialize_tree b in 
+    let d = deserialize_tree b in 
     Heap.Node (g, d)
+  | _ -> failwith "desrialize tree : bit invalide"
+;;
+
+(*décode une séquence binaire, prend la séquence et l'arbre de huffman en arguments*)
+let rec decode_data b t = 
+  match b, t with 
+  | [], _ -> [] (*il ne reste plus de bits*)
+  | 0 :: ll, Heap.Node (g, _) -> decode_data ll g
+  | 1 :: ll, Heap.Node (_, d) -> decode_data ll d
+  (*on ajoute le charactère dans la liste*)
+  | _, Heap.Leaf char -> char :: decode_data b t
+  | _ -> failwith "decode_data : bit invalide"
+;;
+
+let rec read_bits b = 
+  try 
+    let bit = Bs.read_n_bits b 1 in 
+    bit :: read_bits b
+  with 
+  | Bs.End_of_stream -> []
+;;
+
+let decompress f = 
+  let in_c = open_in f in 
+  let b = Bs.of_in_channel in_c in 
+  let huff_tree = deserialize_tree b in 
+  (*les bits qui restent (sans l'arbre)*)
+  let data = decode_data (read_bits b) huff_tree in 
+  let res = Filename.chop_suffix f ".hf" in 
+  let cout = open_out res in 
+  List.iter (fun char -> output_byte cout (Char.code char)) data;
+  close_out cout; 
+  close_in in_c
 ;;
