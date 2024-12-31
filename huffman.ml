@@ -1,5 +1,6 @@
+open Heap
 let decompress _ = failwith "todo"
-let compress _ = failwith "todo"
+
 
 let input_code cin = 
   (*fonction qui gère l'exception*)
@@ -11,13 +12,198 @@ let input_code cin =
 
 let char_freq in_c = 
   let tab = Array.make 256 0 in
-  let rec aux () = 
+  let rec loop () = 
         let o = input_code in_c in 
           if o < 0 then tab
           else (
             tab.(o) <- tab.(o) + 1;
-            aux ()
+            loop ()
           )
   in
-  aux ()
+  loop ()
+;;
+
+(*contruire le nombre d'occurences de chaque caractère du texte
+par exemple : H = (3, s) (3, a) (2, t) (2, i) (1, f) (1, n) *)
+
+let freq_heap tab = 
+  let rec aux acc i = 
+    if i = 256 then acc
+    else 
+      let nacc = 
+      if tab.(i) > 0 then (tab.(i), Heap.Leaf (Char.chr i)) :: acc 
+      else acc 
+      in 
+      aux nacc (i+1)
+  in
+  aux [] 0
+;;
+
+(*construire l'arbre à partir de heap de fréquence*)
+let build_huff_tree h = 
+  let rec loop heap = 
+    match heap with 
+    | [] -> failwith "build_huff_tree on empty heap"
+    | [(_, t)] -> t (*il reste un arbre au final*)
+    | _ -> (*au moins deux*)
+      (*extraire les deux minimums*)
+      let (f1, t1), heap1 = Heap.remove_min heap in 
+      let (f2, t2), heap2 = Heap.remove_min heap1 in 
+      (*combiner ces deux minimums*)
+      let t3 = Heap.Node (t1, t2) in 
+      let heap3 = Heap.add ((f1 + f2), t3) heap2 in 
+      loop heap3
+  in
+  loop (List.sort (fun a b -> compare (fst a) (fst b)) h)
+;;
+
+(*fonction qui affiche l'arbre, ajoutée pour tests, i accumulateur pour l'identation*)
+let rec print_tree t i = 
+  match t with 
+  | Heap.Leaf c -> Printf.printf "%sLeaf '%c'\n" i c
+  | Heap.Node (g, d) -> (*gauche et droit*)
+    Printf.printf "%sNode\n" i;
+    print_tree g (i ^ " ");
+    print_tree d (i ^ " ")
+;;
+
+(*FONCTIONS POUR GESTION DE LA LIGNE DE COMMANDE :*)
+
+(*fonction qui affiche le message d'aide*)
+let help () = 
+  Printf.printf "=============================================\n";
+  Printf.printf "              Programme Huff                 \n";
+  Printf.printf "=============================================\n\n";
+
+  Printf.printf "huff --help              Affiche le message d'aide\n";
+  Printf.printf "huff fichier             Compression du fichier\n";
+  Printf.printf "huff fichier.hf          Décompression du fichier\n";
+  Printf.printf "huff --stats fichier     Compression et statistques\n";
+
+  Printf.printf "\n";
+  Printf.printf "=============================================\n\n"
+;;
+
+let stats () = failwith "todo"
+
+(*fonction qui donne le code (chemin) des caractères à partir de l'arbre de huffman
+droite : 1, gauche : 0
+renvoie une liste de paire dont la première composante est le caractère
+la seconde est son code *)
+let code_of_tree tree =
+  let rec loop t code acc = 
+    match t with 
+    | Heap.Leaf c -> (c, code) :: acc
+    | Heap.Node (g, d) -> 
+      let nacc = loop g (code ^ "0") acc in 
+      loop d (code ^ "1") nacc
+  in
+  loop tree "" []
+;;
+
+(*fonction pour sérialisation de l'arbre
+si on est dans un noeud interne, on écrit 1 puis sur SAG et SAD
+si on est dans une feuille, on écrit 0 *)
+let rec serialize_tree os t = 
+  match t with 
+  | Heap.Leaf c -> 
+    Bs.write_bit os 0; 
+    Bs.write_byte os (Char.code c);
+  | Heap.Node (g, d) -> 
+    Bs.write_bit os 1;
+    serialize_tree os g; 
+    serialize_tree os d
+;;
+
+(*pour écrire le ostream dans un fichier compressé
+à partir d'un istream et la liste de codes (qui est comme un dictionnaire)*)
+let write_data in_c codes os =
+  let rec loop () =
+    match input_code in_c with
+    | -1 -> () (* eof *)
+    | bit ->
+      let code = List.assoc (Char.chr bit) codes in
+      Bs.write_n_bits os (String.length code) (int_of_string ("0b" ^ code));
+      loop ()
+  in
+  loop ()
+;;
+
+let compress f =
+  let in_c = open_in f in
+  let freq_tab = char_freq in_c in
+  let freq_heap = freq_heap freq_tab in
+  let huff_tree = build_huff_tree freq_heap in
+  let char_codes = code_of_tree huff_tree in
+
+  let f2 = f^".hf" in 
+  let cout = open_out f2 in
+  let os = Bs.of_out_channel cout in
+  serialize_tree os huff_tree;
+
+  seek_in in_c 0;
+
+  write_data in_c char_codes os;
+
+  Bs.finalize os;
+  close_in in_c;
+  close_out cout
+;;
+
+(* Fonction pour reconstruire l'arbre de Huffman à partir d'un flux binaire *)
+let rec deserialize_tree is =
+  match Bs.read_bit is with
+  | 0 -> 
+    let c = Char.chr (Bs.read_byte is) in
+    Heap.Leaf c
+  | 1 -> 
+    let left = deserialize_tree is in
+    let right = deserialize_tree is in
+    Heap.Node (left, right)
+  | _ -> raise (Failure "deserialize_tree: Invalid bit")
+
+(* Fonction pour décoder un flux binaire en utilisant un arbre de Huffman *)
+let decode_tree is tree =
+  let rec loop node =
+    match node with
+    | Heap.Leaf c -> 
+      String.make 1 c (* Retourner le caractère trouvé *)
+    | Heap.Node (left, right) -> 
+      (match Bs.read_bit is with
+       | 0 -> loop left  (* Aller à gauche pour 0 *)
+       | 1 -> loop right (* Aller à droite pour 1 *)
+       | _ -> raise (Failure "decode_tree: Invalid bit"))
+  in
+  let rec decode_all acc =
+    try
+      let decoded = loop tree in
+      decode_all (acc ^ decoded) (* Ajouter les caractères décodés à l'accumulateur *)
+    with 
+    | End_of_file -> acc (* Retourner l'accumulateur lorsque le flux se termine *)
+  in
+  decode_all ""  (* Démarre avec un accumulateur vide *)
+
+
+
+(* Fonction principale pour la décompression *)
+let decompress f =
+  let cin = open_in f in
+  let is = Bs.of_in_channel cin in
+
+  (* Désérialisation de l'arbre de Huffman depuis l'entrée *)
+  let huff_tree = deserialize_tree is in
+  
+  (* Décodage des données en utilisant l'arbre *)
+  let data = decode_tree is huff_tree in
+
+  (* Nom du fichier décompressé *)
+  let f2 = String.sub f 0 (String.length f - 3) in
+  let cout = open_out f2 in
+  
+  (* Écrire les données décompressées dans le fichier *)
+  output_string cout data;
+
+  (* Finalisation des flux *)
+  close_in cin;
+  close_out cout
 ;;
