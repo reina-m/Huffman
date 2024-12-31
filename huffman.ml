@@ -84,7 +84,39 @@ let help () =
   Printf.printf "=============================================\n\n"
 ;;
 
-let stats () = failwith "todo"
+(* Fonction pour calculer la taille d'un fichier *)
+let file_size f =
+  let i = open_in_bin f in
+  let size = in_channel_length i in
+  close_in i;
+  size
+;;
+
+(* Fonction pour afficher les statistiques de compression *)
+let stats input_file =
+  let compressed_file = input_file ^ ".hf" in
+
+  try
+    Printf.printf "Compression en cours pour le fichier : %s\n" input_file;
+    Huffman.compress input_file compressed_file;
+    Printf.printf "Compression terminée.\n";
+    let original_size = file_size input_file in
+    let compressed_size = file_size compressed_file in
+
+    let compression_ratio =
+      if original_size = 0 then 0.0
+      else (1.0 -. (float_of_int compressed_size /. float_of_int original_size)) *. 100.0
+    in
+    Printf.printf "Statistiques de compression :\n";
+    Printf.printf "Taille originale : %d octets\n" original_size;
+    Printf.printf "Taille compressée : %d octets\n" compressed_size;
+    Printf.printf "Taux de compression : %.2f%%\n" compression_ratio;
+  with
+  | Sys_error err -> Printf.eprintf "Erreur système : %s\n" err
+  | Failure msg -> Printf.eprintf "Erreur : %s\n" msg
+  | e -> Printf.eprintf "Erreur inconnue : %s\n" (Printexc.to_string e)
+;;
+
 
 (*fonction qui donne le code (chemin) des caractères à partir de l'arbre de huffman
 droite : 1, gauche : 0
