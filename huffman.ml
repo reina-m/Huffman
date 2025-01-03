@@ -92,30 +92,7 @@ let file_size f =
   size
 ;;
 
-(* Fonction pour afficher les statistiques de compression *)
-let stats input_file =
-  let compressed_file = input_file ^ ".hf" in
 
-  try
-    Printf.printf "Compression en cours pour le fichier : %s\n" input_file;
-    Huffman.compress input_file compressed_file;
-    Printf.printf "Compression terminée.\n";
-    let original_size = file_size input_file in
-    let compressed_size = file_size compressed_file in
-
-    let compression_ratio =
-      if original_size = 0 then 0.0
-      else (1.0 -. (float_of_int compressed_size /. float_of_int original_size)) *. 100.0
-    in
-    Printf.printf "Statistiques de compression :\n";
-    Printf.printf "Taille originale : %d octets\n" original_size;
-    Printf.printf "Taille compressée : %d octets\n" compressed_size;
-    Printf.printf "Taux de compression : %.2f%%\n" compression_ratio;
-  with
-  | Sys_error err -> Printf.eprintf "Erreur système : %s\n" err
-  | Failure msg -> Printf.eprintf "Erreur : %s\n" msg
-  | e -> Printf.eprintf "Erreur inconnue : %s\n" (Printexc.to_string e)
-;;
 
 
 (*fonction qui donne le code (chemin) des caractères à partir de l'arbre de huffman
@@ -182,6 +159,32 @@ let compress f =
   close_out cout
 ;;
 
+(* Fonction pour afficher les statistiques de compression *)
+let stats input_file =
+  let compressed_file = input_file ^ ".hf" in
+
+  try
+    Printf.printf "Compression en cours pour le fichier : %s\n" input_file;
+    compress input_file;
+    Printf.printf "Compression terminée.\n";
+    let original_size = file_size input_file in
+    let compressed_size = file_size compressed_file in
+
+    let compression_ratio =
+      if original_size = 0 then 0.0
+      else (1.0 -. (float_of_int compressed_size /. float_of_int original_size)) *. 100.0
+    in
+    Printf.printf "Statistiques de compression :\n";
+    Printf.printf "Taille originale : %d octets\n" original_size;
+    Printf.printf "Taille compressée : %d octets\n" compressed_size;
+    Printf.printf "Taux de compression : %.2f%%\n" compression_ratio;
+  with
+  | Sys_error err -> Printf.eprintf "Erreur système : %s\n" err
+  | Failure msg -> Printf.eprintf "Erreur : %s\n" msg
+  | e -> Printf.eprintf "Erreur inconnue : %s\n" (Printexc.to_string e)
+;;
+
+
 (* Fonction pour reconstruire l'arbre de Huffman à partir d'un flux binaire *)
 let rec deserialize_tree is =
   match Bs.read_bit is with
@@ -199,21 +202,21 @@ let decode_tree is tree =
   let rec loop node =
     match node with
     | Heap.Leaf c -> 
-      String.make 1 c (* Retourner le caractère trouvé *)
+      String.make 1 c 
     | Heap.Node (left, right) -> 
       (match Bs.read_bit is with
-       | 0 -> loop left  (* Aller à gauche pour 0 *)
-       | 1 -> loop right (* Aller à droite pour 1 *)
+       | 0 -> loop left 
+       | 1 -> loop right 
        | _ -> raise (Failure "decode_tree: Invalid bit"))
   in
   let rec decode_all acc =
     try
       let decoded = loop tree in
-      decode_all (acc ^ decoded) (* Ajouter les caractères décodés à l'accumulateur *)
+      decode_all (acc ^ decoded) 
     with 
-    | End_of_file -> acc (* Retourner l'accumulateur lorsque le flux se termine *)
+    | End_of_file -> acc
   in
-  decode_all ""  (* Démarre avec un accumulateur vide *)
+  decode_all ""  
 
 
 
@@ -221,21 +224,12 @@ let decode_tree is tree =
 let decompress f =
   let cin = open_in f in
   let is = Bs.of_in_channel cin in
-
-  (* Désérialisation de l'arbre de Huffman depuis l'entrée *)
   let huff_tree = deserialize_tree is in
-  
-  (* Décodage des données en utilisant l'arbre *)
   let data = decode_tree is huff_tree in
-
-  (* Nom du fichier décompressé *)
   let f2 = String.sub f 0 (String.length f - 3) in
+  (*ou let f2 = Filename.remove_extension f in*)
   let cout = open_out f2 in
-  
-  (* Écrire les données décompressées dans le fichier *)
   output_string cout data;
-
-  (* Finalisation des flux *)
   close_in cin;
   close_out cout
 ;;
