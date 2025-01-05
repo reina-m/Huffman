@@ -203,30 +203,6 @@ let rec deserialize_tree is =
 
 
 
-(* Fonction pour décoder un flux binaire en utilisant un arbre de Huffman *)
-let decode_tree is tree =
-  let rec loop node =
-    match node with
-    | Heap.Leaf c -> String.make 1 c
-    | Heap.Node (left, right) -> 
-      (match Bs.read_bit is with
-      | 0 -> loop left
-      | 1 -> loop right
-      | _ -> failwith "decode_tree: Invalid bit")
-  in
-  let rec decode_all acc =
-    try
-      let decoded = loop tree in
-      decode_all (acc ^ decoded)
-    with 
-    | Bs.End_of_stream -> acc
-  in
-  decode_all ""
-
-
-
-
-
 
 (* Fonction principale pour la décompression *)
 let decompress f =
@@ -235,7 +211,26 @@ let decompress f =
     let cin = open_in f in
     let is = Bs.of_in_channel cin in
     let huff_tree = deserialize_tree is in
-    let data = decode_tree is huff_tree in
+
+    (* ici je cherche a decoder en utilisant une boucle iterative *)
+    let decode_tree_iterative is tree =
+      let result = Buffer.create 1024 in
+      let rec vers node =
+        match node with
+        | Heap.Leaf c ->
+          Buffer.add_char result c;
+          vers tree (* Revenir à la racine après avoir trouvé un caractère *)
+        | Heap.Node (left, right) -> (
+            match Bs.read_bit is with
+            | 0 -> vers left
+            | 1 -> vers right
+            | _ -> failwith "decode_tree: Invalid bit")
+      in
+      (try vers tree with Bs.End_of_stream -> ());
+      Buffer.contents result
+    in
+
+    let data = decode_tree_iterative is huff_tree in
 
     (* Définir le nouveau nom du fichier avec suffixe " decompressed" *)
     let f2 = Filename.chop_suffix f ".hf" ^ ".decompressed" in
@@ -250,4 +245,4 @@ let decompress f =
   with
   | Failure msg -> Printf.printf "Erreur de décompression : %s\n" msg
   | Sys_error msg -> Printf.printf "Erreur système : %s\n" msg
-
+  
