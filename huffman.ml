@@ -187,49 +187,74 @@ let stats input_file =
 
 (* Fonction pour reconstruire l'arbre de Huffman à partir d'un flux binaire *)
 let rec deserialize_tree is =
-  match Bs.read_bit is with
-  | 0 -> 
-    let c = Char.chr (Bs.read_byte is) in
-    Heap.Leaf c
-  | 1 -> 
-    let left = deserialize_tree is in
-    let right = deserialize_tree is in
-    Heap.Node (left, right)
-  | _ -> raise (Failure "deserialize_tree: Invalid bit")
+  try
+    match Bs.read_bit is with
+    | 0 -> 
+      let c = Char.chr (Bs.read_byte is) in
+      Printf.printf "Read Leaf: %c\n%!";
+      Heap.Leaf c
+    | 1 -> 
+      Printf.printf "Read Node\n%!";
+      let left = deserialize_tree is in
+      let right = deserialize_tree is in
+      Heap.Node (left, right)
+    | _ -> raise (Failure "deserialize_tree: Invalid bit")
+  with
+  | Bs.End_of_stream -> failwith "deserialize_tree: Unexpected end of stream"
+  | e -> failwith ("deserialize_tree error: " ^ Printexc.to_string e)
+
+
 
 (* Fonction pour décoder un flux binaire en utilisant un arbre de Huffman *)
 let decode_tree is tree =
   let rec loop node =
     match node with
-    | Heap.Leaf c -> 
-      String.make 1 c 
+    | Heap.Leaf c -> String.make 1 c
     | Heap.Node (left, right) -> 
       (match Bs.read_bit is with
-       | 0 -> loop left 
-       | 1 -> loop right 
-       | _ -> raise (Failure "decode_tree: Invalid bit"))
+      | 0 -> loop left
+      | 1 -> loop right
+      | _ -> failwith "decode_tree: Invalid bit")
   in
   let rec decode_all acc =
     try
       let decoded = loop tree in
-      decode_all (acc ^ decoded) 
+      decode_all (acc ^ decoded)
     with 
-    | End_of_file -> acc
+    | Bs.End_of_stream -> acc
   in
-  decode_all ""  
+  decode_all ""
+
+
+
 
 
 
 (* Fonction principale pour la décompression *)
 let decompress f =
-  let cin = open_in f in
-  let is = Bs.of_in_channel cin in
-  let huff_tree = deserialize_tree is in
-  let data = decode_tree is huff_tree in
-  let f2 = String.sub f 0 (String.length f - 3) in
-  (*ou let f2 = Filename.remove_extension f in*)
-  let cout = open_out f2 in
-  output_string cout data;
-  close_in cin;
-  close_out cout
-;;
+  try
+    Printf.printf "Décompression du fichier %s\n" f;
+    let cin = open_in f in
+    let is = Bs.of_in_channel cin in
+
+    (* Désérialiser l'arbre de Huffman *)
+    let huff_tree = deserialize_tree is in
+
+    (* Décoder les données en utilisant l'arbre de Huffman *)
+    let data = decode_tree is huff_tree in
+
+    (* Définir le nouveau nom du fichier avec suffixe " decompressed" *)
+    let f2 = Filename.chop_suffix f ".hf" ^ " decompressed" in
+
+    (* Enregistrer les données décompressées *)
+    let cout = open_out f2 in
+    output_string cout data;
+    close_in cin;
+    close_out cout;
+
+    Printf.printf "Fichier décompressé enregistré sous : %s\n" f2
+  with
+  | Failure msg -> Printf.printf "Erreur de décompression : %s\n" msg
+  | Sys_error msg -> Printf.printf "Erreur système : %s\n" msg
+  | _ as e -> Printf.printf "Erreur inconnue : %s\n" (Printexc.to_string e)
+
