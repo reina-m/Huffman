@@ -1,9 +1,7 @@
 open Heap
-let decompress _ = failwith "todo"
 
 
 let input_code cin = 
-  (*fonction qui gère l'exception*)
   try 
     input_byte cin 
   with End_of_file -> -1
@@ -137,6 +135,26 @@ let write_data in_c codes os =
   in
   loop ()
 ;;
+(* fonction avec buffer pour eviter de stocker toute la compression
+en memoire, fait avec decompress aussi.
+
+let write_data in_c codes os =
+  let buffer = Bytes.create 4096 in
+  let rec loop () =
+    let bytes_read = input in_c buffer 0 4096 in
+    if bytes_read > 0 then (
+      for i = 0 to bytes_read - 1 do
+        let char_code = Bytes.get buffer i |> Char.code in
+        let code = List.assoc (Char.chr char_code) codes in
+        Bs.write_n_bits os (String.length code) (int_of_string ("0b" ^ code));
+      done;
+      loop ()
+    )
+  in
+  loop ()
+;;
+
+*)
 
 let compress f =
   let in_c = open_in f in
@@ -160,14 +178,12 @@ let compress f =
 ;;
 
 (* Fonction pour afficher les statistiques de compression *)
-let stats input_file =
-  let compressed_file = input_file ^ ".hf" in
-
-  try
-    Printf.printf "Compression en cours pour le fichier : %s\n" input_file;
-    compress input_file;
+let stats fichier =
+  let compressed_file = fichier ^ ".hf" in
+    Printf.printf "Compression en cours pour le fichier : %s\n" fichier;
+    compress fichier;
     Printf.printf "Compression terminée.\n";
-    let original_size = file_size input_file in
+    let original_size = file_size fichier in
     let compressed_size = file_size compressed_file in
 
     let compression_ratio =
@@ -177,11 +193,7 @@ let stats input_file =
     Printf.printf "Statistiques de compression :\n";
     Printf.printf "Taille originale : %d octets\n" original_size;
     Printf.printf "Taille compressée : %d octets\n" compressed_size;
-    Printf.printf "Taux de compression : %.2f%%\n" compression_ratio;
-  with
-  | Sys_error err -> Printf.eprintf "Erreur système : %s\n" err
-  | Failure msg -> Printf.eprintf "Erreur : %s\n" msg
-  | e -> Printf.eprintf "Erreur inconnue : %s\n" (Printexc.to_string e)
+    Printf.printf "Taux de compression : %.2f%%\n" compression_ratio
 ;;
 
 
@@ -213,27 +225,27 @@ let decompress f =
     let huff_tree = deserialize_tree is in
 
     (* ici je cherche a decoder en utilisant une boucle iterative *)
+    (* il y a aussi l'utilisation d'un Buffer pour pouvoir 
+    apprivoiser les gros fichiers*)
     let decode_tree_iterative is tree =
       let result = Buffer.create 1024 in
-      let rec vers node =
+      let rec loop node =
         match node with
         | Heap.Leaf c ->
           Buffer.add_char result c;
-          vers tree (* Revenir à la racine après avoir trouvé un caractère *)
+          loop tree (* Revenir à la racine après avoir trouvé un caractère *)
         | Heap.Node (left, right) -> (
             match Bs.read_bit is with
-            | 0 -> vers left
-            | 1 -> vers right
+            | 0 -> loop left
+            | 1 -> loop right
             | _ -> failwith "decode_tree: Invalid bit")
       in
-      (try vers tree with Bs.End_of_stream -> ());
+      (try loop tree with Bs.End_of_stream -> ());
       Buffer.contents result
     in
 
     let data = decode_tree_iterative is huff_tree in
-
-    (* Définir le nouveau nom du fichier avec suffixe " decompressed" *)
-    let f2 = Filename.chop_suffix f ".hf" ^ ".decompressed" in
+    let f2 = Filename.chop_suffix f ".hf" in
 
     (* Enregistrer les données décompressées *)
     let cout = open_out f2 in
