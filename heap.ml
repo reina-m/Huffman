@@ -3,8 +3,11 @@ type tree =
   | Node of tree * tree 
 ;;
 
-(*ordonnées par ordre décroissant*)
-type heap = (int * tree) list
+(*ordonnées par ordre croissant*)
+type t = (int * tree) list
+(** The type of heaps. Elements are ordered using generic comparison.
+*)
+
 let empty = []
 
 let is_singleton h = 
@@ -14,27 +17,28 @@ let is_singleton h =
 ;;
 
 let is_empty h = 
-  h = empty (*à tester*)
+  h = empty
 ;;
 
-let rec add h x = 
+let rec add x h = 
   match h with 
   | [] -> [x]
-  | (a, b) :: tt ->
-    if fst x <= a then x :: tt
-    else (a, b) :: add tt x
+  | (a, b) :: hh ->
+    if fst x < a then x :: h
+    else (a, b) :: add x hh
 ;;
 
-
-let find_min he = 
-  let rec aux acc h=
-  match acc h with 
-  | (_,[]) -> acc
-  | ([], e :: hh) -> aux e hh  
-  | ((a1, b1) :: _, (a2, b2) :: hh) -> if a2 < a1 then aux [(a2, b2)] hh 
-  else aux [(a2,b2)::acc] hh
-in aux [] he
+let find_min h = 
+  match h with 
+  | [] -> failwith "find_min on empty heap"
+  | e :: _ -> e
 ;;
-    
+
+let remove_min h = 
+  match h with 
+  | [] -> failwith "remove_min on empty heap"
+  | e :: hh -> (e, hh)
+;;
+
     
  
