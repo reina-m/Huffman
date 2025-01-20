@@ -136,7 +136,7 @@ let write_data in_c codes os =
   loop ()
 ;;
 (* fonction avec buffer pour eviter de stocker toute la compression
-en memoire. Le Buffer a aussi ete utiliser avec decompress.
+en memoire. Le Buffer a aussi ete fait avec decompress aussi.
 
 let write_data in_c codes os =
   let buffer = Bytes.create 4096 in
