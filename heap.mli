@@ -26,4 +26,3 @@ val is_singleton : t -> bool
 
 val is_empty : t -> bool
 (** [is_empty h] returns [true] if [h] contains zero element *)
-(** [is_empty h] returns [true] if [h] contains zero element *)
