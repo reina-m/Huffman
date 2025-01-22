@@ -25,7 +25,7 @@ let rec remonte_heap h i =
     )
 
 
-let rec add x h = 
+let add x h = 
   let h' = Array.append h [| x |] in
   remonte_heap h' (Array.length h' - 1);
   h'
@@ -60,17 +60,3 @@ let remove_min h =
     let h'' = Array.sub h' 0 (Array.length h - 1) in
     descend_heap h'' 0;
     (h.(0), h'')
-  
-    
-  (*if is_empty h then failwith "remove_min on empty heap"
-  else if is_singleton h then (h.(0), [||])
-  else 
-    let dernier_elem = h.(Array.length h - 1) in
-    let h1= Array.copy h in 
-    h1.(0) <- dernier_elem;
-    let h2 = Array.make (Array.length h - 1) h1.(0) in
-    for i = 0 to Array.length h - 2 do
-      h2.(i) <- h1.(i + 1)
-    done;
-    descend_heap h2 0;
-    (h1.(0), h2) *)
