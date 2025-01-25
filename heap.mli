@@ -3,7 +3,7 @@ type tree =
   | Node of tree * tree 
 ;;
 
-type t = (int * tree) list
+type t = (int * tree) array
 (** The type of heaps. Elements are ordered using generic comparison.
 *)
 
@@ -25,5 +25,4 @@ val is_singleton : t -> bool
 (** [is_singleton h] returns [true] if [h] contains one element *)
 
 val is_empty : t -> bool
-(** [is_empty h] returns [true] if [h] contains zero element *)
 (** [is_empty h] returns [true] if [h] contains zero element *)
