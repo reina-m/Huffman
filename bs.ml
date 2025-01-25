@@ -102,3 +102,4 @@ let write_n_bits (os : ostream) n b =
 let write_byte os b = write_n_bits os 8 b
 let write_short os b = write_n_bits os 16 b
 let write_int os b = write_n_bits os Sys.int_size b
+

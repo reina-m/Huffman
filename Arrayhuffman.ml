@@ -1,4 +1,4 @@
-open Heap
+open Arrayheap
 
 
 let input_code cin = 
@@ -25,41 +25,33 @@ let char_freq in_c =
 par exemple : H = (3, s) (3, a) (2, t) (2, i) (1, f) (1, n) *)
 
 let freq_heap tab = 
-  let rec aux acc i = 
-    if i = 256 then acc
-    else 
-      let nacc = 
-      if tab.(i) > 0 then (tab.(i), Heap.Leaf (Char.chr i)) :: acc 
-      else acc 
-      in 
-      aux nacc (i+1)
-  in
-  aux [] 0
+  Array.fold_left (fun heap (i, freq) ->
+    if freq > 0 then add (freq, Leaf (Char.chr i)) heap else heap
+  ) empty (Array.mapi (fun i freq -> (i, freq)) tab)
 ;;
-
+  
 (*construire l'arbre à partir de heap de fréquence*)
 let build_huff_tree h = 
   let rec loop heap = 
-    match heap with 
-    | [] -> failwith "build_huff_tree on empty heap"
-    | [(_, t)] -> t (*il reste un arbre au final*)
-    | _ -> (*au moins deux*)
-      (*extraire les deux minimums*)
-      let (f1, t1), heap1 = Heap.remove_min heap in 
-      let (f2, t2), heap2 = Heap.remove_min heap1 in 
-      (*combiner ces deux minimums*)
-      let t3 = Heap.Node (t1, t2) in 
-      let heap3 = Heap.add ((f1 + f2), t3) heap2 in 
+    if is_empty heap then failwith "build_huff_tree on empty heap"
+    else if is_singleton heap then snd (find_min heap)  (* Un seul élément, c'est l'arbre final *)
+    else (
+      (* Extraire les deux éléments minimaux *)
+      let (f1, t1), heap1 = remove_min heap in
+      let (f2, t2), heap2 = remove_min heap1 in
+      (* Combiner ces deux éléments *)
+      let t3 = Node (t1, t2) in
+      let heap3 = add (f1 + f2, t3) heap2 in
       loop heap3
+    )
   in
-  loop (List.sort (fun a b -> compare (fst a) (fst b)) h)
-;;
+  loop h
 
 (*fonction qui affiche l'arbre, ajoutée pour tests, i accumulateur pour l'identation*)
 let rec print_tree t i = 
   match t with 
-  | Heap.Leaf c -> Printf.printf "%sLeaf '%c'\n" i c
-  | Heap.Node (g, d) -> (*gauche et droit*)
+  | Leaf c -> Printf.printf "%sLeaf '%c'\n" i c
+  | Node (g, d) -> (*gauche et droit*)
     Printf.printf "%sNode\n" i;
     print_tree g (i ^ " ");
     print_tree d (i ^ " ")
@@ -100,8 +92,8 @@ la seconde est son code *)
 let code_of_tree tree =
   let rec loop t code acc = 
     match t with 
-    | Heap.Leaf c -> (c, code) :: acc
-    | Heap.Node (g, d) -> 
+    | Leaf c -> (c, code) :: acc
+    | Node (g, d) -> 
       let nacc = loop g (code ^ "0") acc in 
       loop d (code ^ "1") nacc
   in
@@ -113,10 +105,10 @@ si on est dans un noeud interne, on écrit 1 puis sur SAG et SAD
 si on est dans une feuille, on écrit 0 *)
 let rec serialize_tree os t = 
   match t with 
-  | Heap.Leaf c -> 
+  | Leaf c -> 
     Bs.write_bit os 0; 
     Bs.write_byte os (Char.code c);
-  | Heap.Node (g, d) -> 
+  | Node (g, d) -> 
     Bs.write_bit os 1;
     serialize_tree os g; 
     serialize_tree os d
@@ -135,26 +127,7 @@ let write_data in_c codes os =
   in
   loop ()
 ;;
-(* fonction avec buffer pour eviter de stocker toute la compression
-en memoire. Le Buffer a aussi ete fait avec decompress aussi.
 
-let write_data in_c codes os =
-  let buffer = Bytes.create 4096 in
-  let rec loop () =
-    let bytes_read = input in_c buffer 0 4096 in
-    if bytes_read > 0 then (
-      for i = 0 to bytes_read - 1 do
-        let char_code = Bytes.get buffer i |> Char.code in
-        let code = List.assoc (Char.chr char_code) codes in
-        Bs.write_n_bits os (String.length code) (int_of_string ("0b" ^ code));
-      done;
-      loop ()
-    )
-  in
-  loop ()
-;;
-
-*)
 
 let compress f =
   let in_c = open_in f in
@@ -199,26 +172,23 @@ let stats fichier =
 
 (* Fonction pour reconstruire l'arbre de Huffman à partir d'un flux binaire *)
 let rec deserialize_tree is =
-  try
     match Bs.read_bit is with
     | 0 -> 
       let c = Char.chr (Bs.read_byte is) in
-      Heap.Leaf c
+      Leaf c
     | 1 -> 
       let left = deserialize_tree is in
       let right = deserialize_tree is in
-      Heap.Node (left, right)
+      Node (left, right)
     | _ -> raise (Failure "deserialize_tree: Invalid bit")
-  with
-  | Bs.End_of_stream -> failwith "deserialize_tree: end of stream"
-  | e -> failwith ("deserialize_tree error")
+
 
 
 
 
 (* Fonction principale pour la décompression *)
 let decompress f =
-  try
+
     Printf.printf "Décompression du fichier %s\n" f;
     let cin = open_in f in
     let is = Bs.of_in_channel cin in
@@ -231,10 +201,10 @@ let decompress f =
       let result = Buffer.create 1024 in
       let rec loop node =
         match node with
-        | Heap.Leaf c ->
+        | Leaf c ->
           Buffer.add_char result c;
           loop tree (* Revenir à la racine après avoir trouvé un caractère *)
-        | Heap.Node (left, right) -> (
+        | Node (left, right) -> (
             match Bs.read_bit is with
             | 0 -> loop left
             | 1 -> loop right
@@ -254,7 +224,5 @@ let decompress f =
     close_out cout;
 
     Printf.printf "Fichier décompressé enregistré sous : %s\n" f2
-  with
-  | Failure msg -> Printf.printf "Erreur de décompression : %s\n" msg
-  | Sys_error msg -> Printf.printf "Erreur système : %s\n" msg
+
   

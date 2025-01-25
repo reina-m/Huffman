@@ -1,4 +1,4 @@
-open Huffman
+open Arrayhuffman
 
 let main () =
   let argc = Array.length Sys.argv in
