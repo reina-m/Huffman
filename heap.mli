@@ -3,7 +3,7 @@ type tree =
   | Node of tree * tree 
 ;;
 
-type t = (int * tree) list
+type t = (int * tree) array
 (** The type of heaps. Elements are ordered using generic comparison.
 *)
 
