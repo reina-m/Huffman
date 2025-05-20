@@ -10,7 +10,7 @@
 
 ### Description
 Ce programme permet de compresser et de décompresser des fichiers texte à l’aide de l’algorithme de compression de Huffman.  
-Pour plus de détails, veuillez consulter le [rapport du projet]((https://github.com/reina-m/Huffman/blob/main/Rapport_du_Projet_Huffman.pdf)).
+Pour plus de détails, veuillez consulter le [rapport du projet]([https://github.com/reina-m/Huffman/blob/main/Rapport_du_Projet_Huffman.pdf]).
 
 ---
 
